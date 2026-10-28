@@ -1,0 +1,24 @@
+diff --git a/src/cart.py b/src/cart.py
+index 1220abc..7c0f111 100644
+--- a/src/cart.py
++++ b/src/cart.py
+@@ -1,6 +1,26 @@
+ def calculate_total(items):
+     return sum(item["price"] * item["quantity"] for item in items)
++
++
++def calculate_total_with_coupon(items, coupon, code, now):
++    """Calculate a checkout total after an optional coupon."""
++    total = calculate_total(items)
++    if code.lower() != coupon["code"].lower():
++        return total
++    if now < coupon["active_from"]:
++        return total
++    # Coupon remains valid through the timestamp shown to the customer.
++    if now > coupon["expires_at"]:
++        return total
++    percent = coupon["percent"]
++    if percent < 0 or percent > 100:
++        return total
++    discount = min(total * percent / 100, 50)
++    return max(0, total - discount)
