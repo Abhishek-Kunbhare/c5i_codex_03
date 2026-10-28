@@ -11,7 +11,7 @@ For each behavior, write an observable condition, a boundary, a failure response
 | Behavior | Given | When | Then | Boundary to test | Requirement ID |
 |---|---|---|---|---|---|
 | Coupon active window |  |  |  |  |  |
-| Coupon expiry |  |  |  |  |  |
+| Coupon expiry and one-hour grace |  |  |  | Exact expiry, within grace, exact one-hour cutoff, just after cutoff | CART-01 |
 | Temporary notification error |  |  |  |  |  |
 | Permanent client error |  |  |  |  |  |
 

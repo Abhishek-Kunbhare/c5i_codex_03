@@ -16,7 +16,7 @@ A small online shop has two separately owned services. Checkout is maintained in
 
 | ID | Requirement | Evidence expected |
 |---|---|---|
-| CART-01 | Match a coupon code without case sensitivity. Apply it only when UTC `active_from <= now < expires_at`. | Tests for matching case, different case, just before activation, exact activation, just before expiry, exact expiry. |
+| CART-01 | Match a coupon code without case sensitivity. Apply it when UTC `active_from <= now <= expires_at + 1 hour`. The grace period is 60 elapsed minutes. | Tests for matching case, different case, just before activation, exact activation, just before expiry, exact expiry, within the grace period, exact one-hour cutoff, and just after the cutoff. |
 | CART-02 | Accept percentages from 0 through 100 inclusive; cap the discount at 50 currency units; total must not fall below zero. | Tests for 0%, 100%, invalid below/above range, capped discount, zero floor. |
 | CART-03 | Keep `calculate_total(items)` callable with the same signature and numeric return type. Add no third-party package. | Existing caller remains valid; regression test; dependency file unchanged. |
 | NOTIF-01 | Retry a temporary failure for at most three total send attempts. Wait 1 second before attempt 2 and 2 seconds before attempt 3. | Deterministic tests using an injected sleeper and fake sender. |
@@ -27,16 +27,16 @@ A small online shop has two separately owned services. Checkout is maintained in
 
 ## Explicit assumptions to challenge
 
-- All timestamps are timezone-aware UTC datetimes. What should happen if they are naive or use another timezone?
-- Expiry is exclusive. At exactly `expires_at`, the coupon is no longer valid.
+- Coupon timestamps must be timezone-aware UTC datetimes. Naive or nonzero-offset timestamps are rejected.
+- A coupon remains usable for one hour after `expires_at`, including the exact one-hour cutoff. After that cutoff it is invalid.
 - “Three attempts” counts the first send plus two retries, not three retries after the first.
 - Waits happen only between retryable attempts: 1 second, then 2 seconds. There is no wait after the final failure.
-- Percentage math/rounding has not been defined by product. Stop before implementation and ask a human to choose. For this lab, the instructor will select a policy and record it in the design note.
+- Round the final coupon-adjusted total to two decimal places using half-up rounding, as recorded in `design_note.md`.
 - “Temporary failure” must have an explicit type or status classification. Do not retry every exception indiscriminately.
 
 ## Out of scope
 
-Taxes, shipping, persistence, queueing, user interface, payment provider, real message sending, production deployment, distributed exactly-once semantics, broad refactoring, and choosing rounding policy without an approved decision.
+Taxes, shipping, persistence, queueing, user interface, payment provider, real message sending, production deployment, distributed exactly-once semantics, and broad refactoring.
 
 ## Definition of done
 

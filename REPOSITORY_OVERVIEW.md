@@ -12,12 +12,12 @@ The brief describes checkout and notifications as separately owned services in s
 
 | Starter | Public function | Current behavior | Existing tests |
 | --- | --- | --- | --- |
-| `learner/starter/cart_service` | `calculate_total(items)` in `src/cart.py` | Sums `price * quantity` for each item dictionary and returns the unadjusted total. An empty cart returns `0`. | A sample total, numeric return type, and empty cart. |
+| `learner/starter/cart_service` | `calculate_total(items)` and `calculate_total_with_coupon(items, coupon, code, now)` in `src/cart.py` | The original function sums `price * quantity`. The new function applies an eligible coupon through one hour after expiry. | Existing contract and coupon behavior, including exact time boundaries. |
 | `learner/starter/notification_service` | `send_order_confirmation(sender, order)` in `src/notifications.py` | Calls the injected sender's `send(order)` method once and returns its result. | A fake sender receives one order and returns `"sent"`. |
 
-Neither starter currently implements coupons or retries. There is no user interface, database, real payment integration, or real notification provider in this exercise.
+The cart starter implements coupons; the notification starter does not yet implement retries. There is no user interface, database, real payment integration, or real notification provider in this exercise.
 
-The existing tests passed when inspected: 2 cart tests and 1 notification test. These tests verify the starting contracts; they do not prove the proposed coupon or retry behavior.
+The current suites contain 9 cart tests and 1 notification test. The notification test verifies the starting contract; it does not prove the proposed retry behavior.
 
 ## Business requirements
 
@@ -27,11 +27,11 @@ The authoritative requirements and acceptance evidence are in [`learner/brief.md
 
 | ID | Required behavior | Evidence expected |
 | --- | --- | --- |
-| CART-01 | Match coupon codes without case sensitivity. Apply a coupon only when `active_from <= now < expires_at`, using UTC timestamps. | Tests for matching and different case, immediately before and at activation, and immediately before and at expiry. |
+| CART-01 | Match coupon codes without case sensitivity. Apply a coupon when `active_from <= now <= expires_at + 1 hour`, using UTC timestamps. | Tests for matching and different case, activation, expiry, grace period, exact one-hour cutoff, and immediately after. |
 | CART-02 | Accept discount percentages from 0 through 100 inclusive. Cap the discount at 50 currency units and keep the final total at or above zero. | Tests for 0%, 100%, values outside the allowed range, the cap, and the zero floor. |
 | CART-03 | Keep `calculate_total(items)` callable with the same signature and a numeric return value. Add no third-party package. | Regression tests for the existing caller and no dependency change. |
 
-Expiry is exclusive: a coupon expiring at 12:00 UTC is invalid at exactly 12:00 UTC. The task card asks for coupon behavior while preserving the old function contract; the precise new API is a design decision to document before implementation.
+The one-hour grace cutoff is inclusive: a coupon expiring at 12:00 UTC remains valid at 13:00 UTC and becomes invalid immediately afterward. The coupon-aware API is `calculate_total_with_coupon(items, coupon, code, now)`; the old `calculate_total(items)` contract remains intact.
 
 ### Notification retry
 
@@ -52,16 +52,16 @@ Expiry is exclusive: a coupon expiring at 12:00 UTC is invalid at exactly 12:00 
 
 The brief's definition of done is **ready for human review**, not automatically approved or merged. The diff should be focused, evidence should belong to the latest revision, and unresolved risks should be visible.
 
-## Decisions required before implementation
+## Design decisions and remaining questions
 
 The lab deliberately leaves some details unresolved:
 
-- **Coupon rounding:** Product has not chosen a percentage calculation and rounding policy. The brief says to stop before implementation and record an approved policy in a design note.
-- **Timezone handling:** The brief assumes timezone-aware UTC datetimes but asks what should happen with naive datetimes or another timezone.
+- **Coupon rounding:** The approved policy is to round the final discounted total to two decimal places, half up.
+- **Timezone handling:** The approved policy requires timezone-aware UTC datetimes and rejects naive or nonzero-offset timestamps.
 - **Retryable failure classification:** “Temporary failure” needs an explicit error type or status classification. Retrying every exception would not meet the requirement.
 - **Contract design:** Any added coupon or retry behavior must preserve the existing public function or sender interface. A required new public contract should be reviewed before coding.
 
-The bounded task cards name missing rounding or timezone decisions and unclear retry classification as stop conditions.
+The cart decisions are recorded in [`learner/design_note.md`](learner/design_note.md). Retry classification remains an unresolved notification task decision.
 
 ## Intended learning workflow
 
@@ -81,10 +81,10 @@ Run this command once from `learner/starter/cart_service` and once from `learner
 
 ## Seeded review exercise
 
-[`learner/review_packet/seeded_pr.diff`](learner/review_packet/seeded_pr.diff) is a proposed patch supplied for review; it is **not applied** to the starter source. Its coupon expiry check uses `now > expires_at`, so it would still apply the coupon at the exact expiry timestamp. That conflicts with CART-01's exclusive expiry rule. It also performs percentage arithmetic without an approved rounding decision. The accompanying [`review_agent_prompt.md`](learner/review_packet/review_agent_prompt.md) asks for concrete, evidence-based findings and warns against treating passing old tests as proof of all new requirements.
+[`learner/review_packet/seeded_pr.diff`](learner/review_packet/seeded_pr.diff) is a historical proposed patch supplied for review; it is **not applied** to the starter source. Its coupon expiry check uses `now > expires_at`, so it would reject coupons during the newly required one-hour grace period. It also does not implement the approved rounding and timestamp validation policies. The accompanying [`review_agent_prompt.md`](learner/review_packet/review_agent_prompt.md) asks for concrete, evidence-based findings and warns against treating passing old tests as proof of all requirements.
 
 ## Scope and limitations
 
-Taxes, shipping, persistence, queueing, UI, payment providers, real message sending, production deployment, and distributed exactly-once delivery are outside this exercise. The repository does not currently contain the completed design note, implemented features, or PRs. The local runbook mentions an instructor answer key under `instructor/`, but that directory is absent from this checkout.
+Taxes, shipping, persistence, queueing, UI, payment providers, real message sending, production deployment, and distributed exactly-once delivery are outside this exercise. The coupon feature and its design note are present; notification retries and PRs are not. The local runbook mentions an instructor answer key under `instructor/`, but that directory is absent from this checkout.
 
 In short, the code is the small starting point; most of the repository teaches the process of defining and reviewing the changes safely.

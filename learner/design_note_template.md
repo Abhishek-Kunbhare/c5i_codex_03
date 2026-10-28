@@ -17,6 +17,7 @@ For each decision, include options, selected option, reason, and consequence.
 | Decision | Options | Selected | Reason | Consequence / tradeoff |
 |---|---|---|---|---|
 | Coupon rounding |  |  |  |  |
+| One-hour grace cutoff | Inclusive or exclusive endpoint |  |  |  |
 | Timezone validation |  |  |  |  |
 | Retryable error class |  |  |  |  |
 
